@@ -300,7 +300,7 @@ struct ConsumerWorkPlace {
     }
 };
 
-int main(int argc, char *argv[]) {
+int main() {
     ConsumerWorkPlace consumers;
     ProducerWorkPlace producers;
     producers.start();
