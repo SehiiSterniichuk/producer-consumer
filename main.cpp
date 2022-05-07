@@ -149,6 +149,7 @@ struct Producer {
         } else {
             counter++;
             counterSection.leave();
+            //можна повертати доступ до змінної, тому що споживач з виробником модифікують різні кінці черги, бо елемент не один у черзі
             queue.push(product);
         }
         printDeliveredProduct(product);
@@ -210,6 +211,7 @@ struct Consumer {
         } else {
             counter--;
             counterSection.leave();
+            //можна повертати доступ до змінної, тому що споживач з виробником модифікують різні кінці черги, бо елемент не один у черзі
             product = queue.pop();
         }
         printConsumedProduct(product);
