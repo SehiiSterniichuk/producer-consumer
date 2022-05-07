@@ -6,11 +6,11 @@
 
 using namespace std;
 
-#define NUMBER_OF_CONSUMERS 10
-#define NUMBER_OF_PRODUCERS 7
+#define NUMBER_OF_CONSUMERS 7
+#define NUMBER_OF_PRODUCERS 10
 #define MAX_QUEUE_CAPACITY 5
-#define MAKE_PRODUCT_TIME 250
-#define CONSUME_PRODUCT_TIME 250
+#define PRODUCER_WORK_TIME 200
+#define CONSUMER_WORK_TIME 250
 #define TIME_OF_WORK 2000
 
 struct CriticalSection {//структура "обгортка" для критичних секцій, створена просто для зручності
@@ -40,12 +40,11 @@ CriticalSection fullQueueSection;//випадок коли черга повна
 CriticalSection counterSection;//критична секція, яка гарантує, що до змінної, котра зберігає розмір черги, буде мати доступ лише один потік
 CriticalSection outputSection;//гарантує, що до консолі матиме доступ лише один потік
 struct Data {
-    int value;
     string info;
 
-    Data(int idOfProducer) {
-        value = rand() % 10000;
-        info = "Product is made by producer " + to_string(idOfProducer) + ", value: " + to_string(value) + ".";
+    Data(int producerID) {
+        int value = rand() % 10000;
+        info = "|Product : " + to_string(value) + " ID: " + to_string(producerID) + "|";
     }
 };
 
@@ -122,7 +121,7 @@ struct Producer {
             if (product == NULL) {
                 product = new Data(id);
             }
-            Sleep(MAKE_PRODUCT_TIME);
+            Sleep(PRODUCER_WORK_TIME);
             producerSection.enter();//блокуємо інших виробників, бо тільки один може класти в чергу
             put();
             producerSection.leave();//даємо доступ іншим виробникам
@@ -157,8 +156,9 @@ struct Producer {
     }
 
     void printDeliveredProduct(Data *product) {
+        string message = product->info + " is delivered in queue";
         outputSection.enter();
-        cout << product->info << " Product is delivered in queue" << endl;
+        cout << message << endl;
         outputSection.leave();
     }
 
@@ -178,9 +178,9 @@ struct Consumer {
 
     void work() {
         while (isWork) {
+            Sleep(CONSUMER_WORK_TIME);
             consumerSection.enter();//блокуємо інших споживачів, бо тільки один може брати з черги
             Data *product = get();
-            Sleep(CONSUME_PRODUCT_TIME);
             consumerSection.leave();//повертаємо доступ до черги для інших споживачів
             if (product != NULL) {
                 delete product;
@@ -217,8 +217,9 @@ struct Consumer {
     }
 
     void printConsumedProduct(Data *product) {
+        string message = product->info + " is consumed by Consumer: " + to_string(id);
         outputSection.enter();
-        cout << product->info << " Product is consumed by Consumer: " << id << endl;
+        cout << message << endl;
         outputSection.leave();
     }
 };
@@ -249,14 +250,6 @@ struct ProducerWorkPlace {
     }
 
     ~ProducerWorkPlace() {
-        WaitForMultipleObjects(NUMBER_OF_PRODUCERS,
-                               producerThread,
-                               TRUE,
-                               MAKE_PRODUCT_TIME * NUMBER_OF_PRODUCERS);
-        /*чекаємо рівно стільки, щоб дочекатися потік споживача, який увійде у критичну секцію, яку не зможуть розблокувати
-         * виробники, які вже закінчили роботу*/
-        noProductsSection.leave();
-        fullQueueSection.leave();
         WaitForMultipleObjects(NUMBER_OF_PRODUCERS,
                                producerThread,
                                TRUE,
@@ -294,14 +287,6 @@ struct ConsumerWorkPlace {
     }
 
     ~ConsumerWorkPlace() {
-        WaitForMultipleObjects(NUMBER_OF_CONSUMERS,
-                               consumerThread,
-                               TRUE,
-                               CONSUME_PRODUCT_TIME * NUMBER_OF_CONSUMERS);
-        /*чекаємо рівно стільки, щоб дочекатися потік споживача, який увійде у критичну секцію, яку не зможуть розблокувати
-         * виробники, які вже закінчили роботу*/
-        noProductsSection.leave();
-        fullQueueSection.leave();
         WaitForMultipleObjects(NUMBER_OF_CONSUMERS,
                                consumerThread,
                                TRUE,
