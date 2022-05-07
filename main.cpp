@@ -249,11 +249,18 @@ struct ProducerWorkPlace {
     }
 
     ~ProducerWorkPlace() {
-        WaitForMultipleObjects(NUMBER_OF_PRODUCERS,  //кількість дескрипторів
-                               producerThread,   // масив дескрипторів кожного потоку
-                               TRUE,/*Якщо цей параметр має значення TRUE,
- * функція повертається, коли сигналізується стан усіх об’єктів у масиві threads*/
-                               INFINITE);//час очікування об'єктів
+        WaitForMultipleObjects(NUMBER_OF_PRODUCERS,
+                               producerThread,
+                               TRUE,
+                               MAKE_PRODUCT_TIME * NUMBER_OF_PRODUCERS);
+        /*чекаємо рівно стільки, щоб дочекатися потік споживача, який увійде у критичну секцію, яку не зможуть розблокувати
+         * виробники, які вже закінчили роботу*/
+        noProductsSection.leave();
+        fullQueueSection.leave();
+        WaitForMultipleObjects(NUMBER_OF_PRODUCERS,
+                               producerThread,
+                               TRUE,
+                               INFINITE);
         for (auto &i: producerThread) {
             CloseHandle(i);//закриття дескриптора потоку
         }
@@ -290,6 +297,14 @@ struct ConsumerWorkPlace {
         WaitForMultipleObjects(NUMBER_OF_CONSUMERS,
                                consumerThread,
                                TRUE,
+                               CONSUME_PRODUCT_TIME * NUMBER_OF_CONSUMERS);
+        /*чекаємо рівно стільки, щоб дочекатися потік споживача, який увійде у критичну секцію, яку не зможуть розблокувати
+         * виробники, які вже закінчили роботу*/
+        noProductsSection.leave();
+        fullQueueSection.leave();
+        WaitForMultipleObjects(NUMBER_OF_CONSUMERS,
+                               consumerThread,
+                               TRUE,
                                INFINITE);
         for (auto &i: consumerThread) {
             CloseHandle(i);//закриття дескриптора потоку
@@ -304,7 +319,6 @@ int main(int argc, char *argv[]) {
     ConsumerWorkPlace consumers;
     ProducerWorkPlace producers;
     producers.start();
-    noProductsSection.enter();
     consumers.start();
     Sleep(TIME_OF_WORK);
     isWork = false;
