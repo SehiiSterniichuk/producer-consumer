@@ -10,7 +10,7 @@ using namespace std;
 #define MAX_QUEUE_CAPACITY 6
 #define PRODUCER_WORK_TIME 250
 #define CONSUMER_WORK_TIME 100
-#define TIME_OF_WORK 3000
+#define TIME_OF_WORK 4000
 
 struct CriticalSection {//структура "обгортка" для критичних секцій, створена просто для зручності
     CRITICAL_SECTION section;
